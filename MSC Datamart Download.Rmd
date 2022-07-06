@@ -1,0 +1,65 @@
+---
+title: "MSC Datamart Download Script"
+output: html_notebook
+---
+
+## Donovan Bangs
+#### Last Updated: 7 July 2022
+
+
+
+The Meteorological Service of Canada (MSC) offers climate and weather data available for download through its [MSC Datamart](https://dd.weather.gc.ca/). This script offers a quick means to read CSVs of daily meteorological data into your R session.
+
+First, we need to define parts of the URL string. A complete path to a CSV will look like:
+
+https://dd.weather.gc.ca/climate/observations/daily/csv/ON/climate_daily_ON_6104142_2008-12_P1D.csv
+
+For December 2008 at the Kingston Climate Station (ID 6104142). 
+
+Because we need to paste the year-month into the middle, we first define the fixed parts of the string:
+
+```{r setup, warning=FALSE}
+datamart_url <- "https://dd.weather.gc.ca/climate/observations/daily/csv/ON/"
+sheet_name <- "climate_daily_ON_6104142_"
+suffix <- "_P1D.csv"
+```
+
+Then let's define some years, and a list of months as characters.
+
+```{r}
+years <- 2008:2022
+months <- c('01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12')
+```
+
+With these pieces in place, we then initialize an empty data frame and loop through the years, inner loop the months, and ```rbind()``` each CSV. A ```tryCatch({})``` structure is included to skip "404 Not Found" errors for months and years that may not be in our range.
+
+```{r eval=FALSE}
+weather_data <- data.frame()
+
+for(y in 1:length(years)){
+  tryCatch({
+    year = years[y]
+  }, error=function(e){})
+
+  for(m in 1:length(months)){
+    tryCatch({
+      month = months[m]
+      
+      string = paste(
+        datamart_url,
+        sheet_name,
+        year,
+        "-",
+        month,
+        suffix,
+        sep = "")
+      
+      data_download <- read.csv(string)
+      
+      weather_data <- rbind(weather_data, data_download)
+      
+    }, error=function(e){})
+  }
+}
+```
+Now your session should include a ```weather_data``` frame with all of the available observations for the station identifier and years you've set above.
